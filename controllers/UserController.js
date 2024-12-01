@@ -153,6 +153,60 @@ const refreshToken = async(req,res)=>{
     }
 }
 
+const logoutUser = async (req, res) => {
+    try {
+        const userId = req.params.id
+
+        if (!userId) {
+            return res.status(401).json({
+                status: 'ERR',
+                message: 'Unauthorized. User ID is missing.',
+            });
+        }
+
+        const response = await UserService.logoutUser(userId);
+        return res.status(200).json(response);
+    } catch (e) {
+        console.error('Error during logout: ', e);
+        return res.status(500).json({
+            status: 'ERR',
+            message: e.message || 'An error occurred during logout',
+        });
+    }
+};
+
+const updatePassword = async (req, res) => {
+    try {
+        const { email, username, password } = req.body;
+
+        // Validate input
+        if (!email || !username || !password) {
+            return res.status(404).json({
+                status: 'ERR',
+                message: 'Email, username, and password are required.',
+            });
+        }
+
+        // Regular expression for password validation
+        const passwordReg = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        const isValidPassword = passwordReg.test(password);
+
+        if (!isValidPassword) {
+            return res.status(404).json({
+                status: 'ERR',
+                message: 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character.',
+            });
+        }
+
+        const response = await UserService.updatePassword(req.body);
+        return res.status(200).json(response);
+    } catch (e) {
+        return res.status(404).json({
+            message: e.message || e,
+        });
+    }
+};
+
 
 module.exports = {
     createUser,
@@ -160,5 +214,6 @@ module.exports = {
     updateUser,
     getDetailsUser,
     refreshToken,
-
+    logoutUser,
+    updatePassword
 }
