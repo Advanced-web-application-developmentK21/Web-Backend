@@ -144,9 +144,57 @@ const getDetailsUser = (id)=>{
     })
 }
 
+const logoutUser = (userId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Clear refresh_token for the user
+            const user = await User.findByIdAndUpdate(userId, { refresh_token: null }, { new: true });
+            if (!user) {
+                return reject('User not found');
+            }
+            resolve({
+                status: '200',
+                message: 'User logged out successfully',  // Fixed duplicate message
+            });
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
+
+
+const updatePassword = ({ email, username, password }) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const user = await User.findOne({ email, username });
+
+            if (!user) {
+                return reject('User not found with the provided email and username.');
+            }
+
+            // Hash the new password
+            const hash = bcrypt.hashSync(password, 10);
+
+            // Update the password
+            user.password = hash;
+            await user.save();
+
+            resolve({
+                status: 'OK',
+                message: 'Password updated successfully',
+            });
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
+
+
 module.exports = {
     createUser,
     loginUser,
     updateUser,
     getDetailsUser,
+    logoutUser,
+    updatePassword
 }
