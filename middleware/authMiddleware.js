@@ -54,11 +54,13 @@ passport.use(
 
                 if (!user) {
                     // If the user doesn't exist, create a new one
+                    const hashedPassword = await bcrypt.hash("Abcde12345@", 10); // Hash the default password
+
                     user = await User.create({
                         username: profile.displayName,
                         email: profile.emails[0].value,
                         googleId: profile.id,
-                        password: "Abcde12345@", // No password needed for Google login
+                        password: hashedPassword, // Save hashed password
                     });
                 } else {
                     // If user exists, update the user record (avoid overwriting password)
@@ -75,7 +77,6 @@ passport.use(
         }
     )
 );
-
 
 // Serialize user for session
 passport.serializeUser((user, done) => done(null, user.id));
