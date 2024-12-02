@@ -27,7 +27,7 @@ router.get(
     passport.authenticate('google', { session: false }),
     (req, res) => {
         const user = req.user; // Lấy thông tin user từ GoogleStrategy
-        res.redirect(`http://localhost:3000/google-login-success?email=${user.email}&username=${user.username}`);
+        res.redirect(`https://web-frontend-0kwj.onrender.com/google-login-success?email=${user.email}&username=${user.username}`);
     }
 );
 
