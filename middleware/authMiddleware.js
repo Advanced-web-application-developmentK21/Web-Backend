@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
-const bcrypt = require('bcryptjs');
+const bcrypt = require("bcrypt")
 dotenv.config();
 
 const passport = require('passport');
