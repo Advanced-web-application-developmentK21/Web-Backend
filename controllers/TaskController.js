@@ -3,37 +3,89 @@ const TaskService = require('../services/TaskService');
 /**
  * Create a new task
  */
-const createTask = async (req, res) => { 
-  try {
-      const { name, description, priority, estimatedTime, status, startDate, dueDate } = req.body;
+const createTask = async (req, res) => {
+    try {
+        const { name, description, priority, status, startDate, dueDate } = req.body;
 
-      // Check if task with the same name exists
-      const existingTask = await TaskService.getTaskByName(name);
-      if (existingTask) {
-          return res.status(409).json({
-              status: 'ERR',
-              message: 'Task with the same name already exists',
-          });
-      }
+        // Validate that startDate and dueDate are provided
+        if (!startDate || !dueDate) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'Both startDate and dueDate are required.',
+            });
+        }
 
-      const newTask = await TaskService.createTask({
-          name,
-          description,
-          priority,
-          estimatedTime,
-          status,
-          startDate,
-          dueDate,
-      });
+        const now = new Date();
 
-      return res.status(200).json({
-          status: 'SUCCESS',
-          data: newTask,
-      });
-  } catch (error) {
-      console.error('Error creating task:', error);
-      return res.status(500).json({ status: 'ERR', message: 'Failed to create task' });
-  }
+        // Validate that dueDate is after startDate
+        if (new Date(dueDate) <= new Date(startDate)) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'dueDate must be after startDate.',
+            });
+        }
+
+        // Validate status based on startDate and dueDate
+        if (status === 'Todo' && new Date(startDate) <= now) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'startDate must be in the future for status "Todo".',
+            });
+        }
+
+        if (status === 'In Progress' && new Date(startDate) > now) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'startDate must be today or in the past for status "In Progress".',
+            });
+        }
+
+        if (status === 'Completed' && (new Date(dueDate) > now || new Date(startDate) > now)) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'startDate and dueDate must be in the past for status "Completed".',
+            });
+        }
+
+        if (status === 'Expired' && new Date(dueDate) >= now) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'dueDate must be in the past for status "Expired".',
+            });
+        }
+
+        // Check if task with the same name exists
+        const existingTask = await TaskService.getTaskByName(name);
+        if (existingTask) {
+            return res.status(409).json({
+                status: 'ERR',
+                message: 'Task with the same name already exists',
+            });
+        }
+
+        // Calculate estimatedTime (in hours)
+        const estimatedTime = Math.ceil(
+            (new Date(dueDate) - new Date(startDate)) / (1000 * 60 * 60)
+        );
+
+        const newTask = await TaskService.createTask({
+            name,
+            description,
+            priority,
+            estimatedTime,
+            status: status || 'Todo', // Default to 'Todo' if not provided
+            startDate,
+            dueDate,
+        });
+
+        return res.status(200).json({
+            status: 'SUCCESS',
+            data: newTask,
+        });
+    } catch (error) {
+        console.error('Error creating task:', error);
+        return res.status(500).json({ status: 'ERR', message: 'Failed to create task' });
+    }
 };
 
 /**
