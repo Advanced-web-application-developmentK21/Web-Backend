@@ -135,11 +135,61 @@ const updateTask = async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
 
-        const updatedTask = await TaskService.updateTask(id, updates);
+        // Validate that startDate and dueDate are provided
+        if (updates.startDate && !updates.dueDate) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'Both startDate and dueDate are required.',
+            });
+        }
 
-        if (!updatedTask) {
+        // Validate that dueDate is after startDate
+        if (updates.startDate && updates.dueDate && new Date(updates.dueDate) <= new Date(updates.startDate)) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'dueDate must be after startDate.',
+            });
+        }
+
+        const now = new Date();
+
+        // Validate status based on startDate and dueDate
+        if (updates.status === 'Todo' && updates.startDate && new Date(updates.startDate) <= now) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'startDate must be in the future for status "Todo".',
+            });
+        }
+
+        if (updates.status === 'In Progress' && updates.startDate && new Date(updates.startDate) > now) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'startDate must be today or in the past for status "In Progress".',
+            });
+        }
+
+        if (updates.status === 'Completed' && (updates.dueDate && new Date(updates.dueDate) > now || updates.startDate && new Date(updates.startDate) > now)) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'startDate and dueDate must be in the past for status "Completed".',
+            });
+        }
+
+        if (updates.status === 'Expired' && updates.dueDate && new Date(updates.dueDate) >= now) {
+            return res.status(400).json({
+                status: 'ERR',
+                message: 'dueDate must be in the past for status "Expired".',
+            });
+        }
+
+        // Check if task exists to update
+        const existingTask = await TaskService.getTaskById(id);
+        if (!existingTask) {
             return res.status(404).json({ status: 'ERR', message: 'Task not found' });
         }
+
+        // Update the task
+        const updatedTask = await TaskService.updateTask(id, updates);
 
         return res.status(200).json({
             status: 'SUCCESS',
@@ -150,6 +200,7 @@ const updateTask = async (req, res) => {
         return res.status(500).json({ status: 'ERR', message: 'Failed to update task' });
     }
 };
+
 
 /**
  * Delete a task by ID
