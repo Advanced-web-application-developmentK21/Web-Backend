@@ -7,5 +7,6 @@ router.get('/getOptionTasks', TaskController.getTasks);
 router.get('/getTasks/:id', TaskController.getTaskById);
 router.put('/updateTasks/:id', TaskController.updateTask);
 router.delete('/deleteTasks/:id', TaskController.deleteTask);
+router.post('/analyze-schedule', TaskController.analyze_schedule);
 
 module.exports = router;
