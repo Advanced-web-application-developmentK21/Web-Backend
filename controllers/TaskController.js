@@ -2,8 +2,8 @@ const TaskService = require('../services/TaskService');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 if (!process.env.GEMINI_API_KEY) {
-  console.error('Missing API key. Please set GENERATIVE_AI_API_KEY in your .env file.');
-  process.exit(1);
+    console.error('Missing API key. Please set GENERATIVE_AI_API_KEY in your .env file.');
+    process.exit(1);
 }
 
 // Initialize the Generative AI client
@@ -256,8 +256,10 @@ const analyze_schedule = async (req, res) => {
               Status: ${task.status}, 
               Title: ${task.title}`)
             .join('\n')}
-        Provide feedback on this schedule, including warnings about tight schedules and recommendations for prioritization and balance, and Simple Steps to Fix. Keep the feedback concise and easy to understand.
-        You should give the short and easy to understand as much as possible.
+        Provide feedback on this schedule with the following include 
+        Warnings: Identify at least three tasks that are too tightly scheduled, have conflicts, or could cause problems. Make sure to highlight at least three issues.
+        Prioritization Recommendations: Advise on which tasks should be prioritized and balanced;
+        Simple Steps to Fix: Suggest quick fixes to improve the schedule, such as moving or extending tasks, or adjusting priorities. Keep the feedback concise and easy to understand.
     `;
 
     const prompt = createPrompt(calendarEvents);
