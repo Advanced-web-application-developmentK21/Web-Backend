@@ -252,7 +252,7 @@ const analyze_schedule = async (req, res) => {
             `- Id: ${task.id}, allDay: ${task.allDay}, desc: ${task.desc} end: ${task.end}, Estimated Time: ${task.estimatedTime || 'Not Scheduled'}, Priority: ${task.priority}, Status: ${task.status}, Title: ${task.title}`
         )
         .join('\n')}
-    Provide Feedback for this schedule includes warnings about tight schedules and prioritization recommendations for balance and focus.
+    Provide Feedback for this schedule includes warnings about tight schedules and prioritization recommendations, Simple Steps to Fix for balance and focus.
     You should give the short and easy to understand as much as possible please.
     `;
 
