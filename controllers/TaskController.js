@@ -256,8 +256,8 @@ const analyze_schedule = async (req, res) => {
               Status: ${task.status}, 
               Title: ${task.title}`)
             .join('\n')}
-        Provide feedback on this schedule, including warnings about tight schedules and recommendations for prioritization and balance, along with Simple Steps to Fix. Keep the feedback concise and easy to understand.
-         You should give the short and easy to understand as much as possible please.
+        Provide feedback on this schedule, including warnings about tight schedules and recommendations for prioritization and balance, and Simple Steps to Fix. Keep the feedback concise and easy to understand.
+        You should give the short and easy to understand as much as possible.
     `;
 
     const prompt = createPrompt(calendarEvents);
@@ -314,3 +314,4 @@ module.exports = {
     updateTask,
     deleteTask,
     analyze_schedule,
+};
