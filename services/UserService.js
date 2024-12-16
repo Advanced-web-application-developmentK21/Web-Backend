@@ -74,7 +74,10 @@ const loginUser = (userLogin) => {
             }
 
             const user_id = checkUser._id;
-            const user_name = checkUser.username
+            const user_name = checkUser.username;
+            const user_email = checkUser.email;
+            const user_password = checkUser.password;
+            const user_created_at = checkUser.createdAt;
             const access_token = await generalAccessToken({ id: checkUser.id });
             const refresh_token = await generalRefreshToken({ id: checkUser.id });
 
@@ -83,6 +86,9 @@ const loginUser = (userLogin) => {
                 message: 'SUCCESS',
                 user_id,
                 user_name,
+                user_email,
+                user_password,
+                user_created_at,
                 access_token,
                 refresh_token,
             });
