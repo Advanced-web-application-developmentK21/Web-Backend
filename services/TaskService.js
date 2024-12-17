@@ -7,17 +7,12 @@ const createTask = async (taskData) => {
     return await Task.create(taskData);
 };
 
-const getTaskByName = async (name) => {
-    return await Task.findOne({ name });
-};
-
-/**
- * Get all tasks with optional search, filter, and sort
- */
-const getTasks = async (queryParams) => {
+const getTasksByUser = async (userId, queryParams) => {
     const { search, priority, status, sortBy } = queryParams;
 
-    let query = {};
+    // Filter tasks by userId
+    let query = { userId };
+
     if (search) {
         query.name = { $regex: search, $options: 'i' }; // Case-insensitive search
     }
@@ -28,8 +23,18 @@ const getTasks = async (queryParams) => {
         query.status = status;
     }
 
+    // Sorting criteria
     const sortCriteria = sortBy ? { [sortBy]: 1 } : { createdAt: -1 };
+
+    // Fetch tasks with filters and sorting
     return await Task.find(query).sort(sortCriteria);
+};
+
+/**
+ * Find a task by name for a specific user
+ */
+const getTaskByNameAndUser = async (name, userId) => {
+    return await Task.findOne({ name, userId });
 };
 
 /**
@@ -55,9 +60,9 @@ const deleteTask = async (id) => {
 
 module.exports = {
     createTask,
-    getTasks,
+    getTasksByUser,
     getTaskById,
     updateTask,
     deleteTask,
-    getTaskByName
+    getTaskByNameAndUser
 };
