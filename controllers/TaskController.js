@@ -217,7 +217,6 @@ const analyze_schedule = async (req, res) => {
         Analyze the following tasks:
         ${events
             .map((task) => `
-            - Id: ${task.id}, 
               All Day: ${task.allDay}, 
               Description: ${task.desc}, 
               End: ${task.end}, 
