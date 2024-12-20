@@ -292,6 +292,50 @@ const getDailyTimeSpentData = async (req, res) => {
     }
 };
 
+const getDashboard = async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        const dashboardData = await TaskService.getDashboardData(userId);
+        res.status(200).json(dashboardData);
+    } catch (error) {
+        console.error(error); // Log error message to help with debugging
+        res.status(500).json({ message: error.message });
+    }
+};
+
+const getTaskStatus = async (req, res) => {
+    const { userId } = req.params; // Get userId from params
+
+    try {
+        console.log('Fetching task status for userId:', userId); // Debugging line
+
+        // Call the service to get task status counts
+        const taskStatusData = await TaskService.getTaskStatusCounts(userId);
+
+        // Send response with task status data
+        res.status(200).json({
+            labels: ['Todo', 'In Progress', 'Completed', 'Expired'],
+            datasets: [
+                {
+                    data: [
+                        taskStatusData.Todo,
+                        taskStatusData['In Progress'],
+                        taskStatusData.Completed,
+                        taskStatusData.Expired,
+                    ],
+                    backgroundColor: ['#F59E0B', '#3B82F6', '#10B981', '#EF4444'],
+                    hoverOffset: 10,
+                },
+            ],
+        });
+    } catch (error) {
+        console.error('Error in getTaskStatus controller:', error); // Debugging line
+        res.status(500).json({ message: error.message });
+    }
+};
+
+
 module.exports = {
     createTask,
     getTasks,
@@ -300,4 +344,6 @@ module.exports = {
     deleteTask,
     analyze_schedule,
     getDailyTimeSpentData,
+    getDashboard,
+    getTaskStatus,
 };
