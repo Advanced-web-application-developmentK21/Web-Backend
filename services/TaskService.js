@@ -1,3 +1,4 @@
+const { default: mongoose } = require('mongoose');
 const Task = require('../models/Task');
 const moment = require('moment');
 
@@ -113,6 +114,97 @@ const getDailyTimeSpent = async (userId, startDate) => {
     }
 };
 
+const getDashboardData = async (userId) => {
+    try {
+        // Convert userId to ObjectId using new
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+
+        // Total time spent (sum of estimated time for completed tasks)
+        const completedTasks = await Task.aggregate([
+            { $match: { userId: userObjectId, status: 'Completed' } },
+            { $group: { _id: null, totalTime: { $sum: '$estimatedTime' } } },
+        ]);
+        console.log('Completed Tasks:', completedTasks); // Debugging line
+
+        const totalTimeSpent = completedTasks.length > 0 ? completedTasks[0].totalTime : 0;
+
+        // Total estimated time (sum of estimated time for all tasks)
+        const totalEstimatedTime = await Task.aggregate([
+            { $match: { userId: userObjectId } },
+            { $group: { _id: null, totalEstimatedTime: { $sum: '$estimatedTime' } } },
+        ]);
+        console.log('Total Estimated Time:', totalEstimatedTime); // Debugging line
+
+        const totalEstimatedTimeValue = totalEstimatedTime.length > 0 ? totalEstimatedTime[0].totalEstimatedTime : 0;
+
+        // Estimated time (percentage of completed vs total tasks)
+        const totalTasks = await Task.countDocuments({ userId: userObjectId });
+        const completedTasksCount = await Task.countDocuments({ userId: userObjectId, status: 'Completed' });
+        console.log('Total Tasks:', totalTasks); // Debugging line
+        console.log('Completed Tasks Count:', completedTasksCount); // Debugging line
+
+        let estimatedTimePercentage = 0;
+        if (totalTasks > 0) {
+            estimatedTimePercentage = (completedTasksCount / totalTasks) * 100;
+        }
+
+        // Round to 2 decimal places
+        estimatedTimePercentage = estimatedTimePercentage.toFixed(2);
+
+        // Task breakdown (total number of tasks)
+        const taskCount = await Task.countDocuments({ userId: userObjectId });
+
+        return {
+            totalTimeSpent,
+            totalEstimatedTime: totalEstimatedTimeValue,
+            estimatedTimePercentage,
+            taskCount,
+        };
+    } catch (error) {
+        console.error('Error occurred:', error); // Debugging line
+        throw new Error('Error fetching dashboard data');
+    }
+};
+
+const getTaskStatusCounts = async (userId) => {
+    try {
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+        console.log('Fetching task counts for userId:', userId); // Debugging line
+
+        // Aggregate tasks based on their status
+        const taskStatusCounts = await Task.aggregate([
+            { $match: { userId: userObjectId } }, // Match tasks by userId
+            { $group: {
+                _id: "$status", // Group tasks by their status
+                count: { $sum: 1 }, // Count the number of tasks per status
+            }},
+        ]);
+
+        console.log('Task Status Counts:', taskStatusCounts); // Debugging line
+
+        // Initialize counts for each status
+        const taskStatusData = {
+            Todo: 0,
+            'In Progress': 0,
+            Completed: 0,
+            Expired: 0,
+        };
+
+        // Populate the status counts from aggregation result
+        taskStatusCounts.forEach(statusData => {
+            if (statusData._id in taskStatusData) {
+                taskStatusData[statusData._id] = statusData.count;
+            }
+        });
+
+        return taskStatusData;
+    } catch (error) {
+        console.error('Error in getTaskStatusCounts:', error); // Debugging line
+        throw new Error('Error fetching task status counts');
+    }
+};
+
+
 module.exports = {
     createTask,
     getTasksByUser,
@@ -120,5 +212,7 @@ module.exports = {
     updateTask,
     deleteTask,
     getTaskByNameAndUser,
-    getDailyTimeSpent
+    getDailyTimeSpent,
+    getDashboardData,
+    getTaskStatusCounts,
 };
