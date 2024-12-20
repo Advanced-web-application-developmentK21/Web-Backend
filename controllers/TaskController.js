@@ -278,6 +278,20 @@ const analyze_schedule = async (req, res) => {
     }
 };
 
+const getDailyTimeSpentData = async (req, res) => {
+    const { userId } = req.params; // Extract userId from URL parameters
+    const { startDate } = req.query; // Extract the start date from the query string
+
+    try {
+        // Pass the userId and startDate to the service
+        const dailyData = await TaskService.getDailyTimeSpent(userId, startDate);
+        res.json(dailyData);
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        res.status(500).json({ message: 'Error fetching data' });
+    }
+};
+
 module.exports = {
     createTask,
     getTasks,
@@ -285,4 +299,5 @@ module.exports = {
     updateTask,
     deleteTask,
     analyze_schedule,
+    getDailyTimeSpentData,
 };

@@ -5,8 +5,7 @@ const userSchema = new mongoose.Schema(
         email: { type: String, required: true, unique: true },
         password: { type: String, required: true },
         access_token: { type: String },
-        refresh_token: { type: String },
-        googleId: { type: String, default: 1 },
+        refresh_token: { type: String }
     },
     {
         timestamps: true,

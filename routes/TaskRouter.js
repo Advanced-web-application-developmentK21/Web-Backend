@@ -8,5 +8,6 @@ router.get('/getTasks/:id', TaskController.getTaskById);
 router.put('/updateTasks/:id', TaskController.updateTask);
 router.delete('/deleteTasks/:id', TaskController.deleteTask);
 router.post('/analyze-schedule', TaskController.analyze_schedule);
+router.get('/daily-time-spent/:userId', TaskController.getDailyTimeSpentData);
 
 module.exports = router;
