@@ -335,6 +335,104 @@ const getTaskStatus = async (req, res) => {
     }
 };
 
+const getAIFeedback = async (req, res) => {
+    const { tasks } = req.body;
+
+    // Validate input
+    if (!tasks || !Array.isArray(tasks)) {
+        return res.status(400).json({ error: 'tasks must be a non-empty array.' });
+    }
+
+    // Helper function to create the prompt for feedback generation
+    const createPrompt = (tasks) => {
+        let excellenceFeedback = '';
+        let attentionFeedback = '';
+        let motivationalFeedback = '';
+    
+        tasks.forEach((task) => {
+            // Areas of Excellence
+            if (task.status === 'Completed') {
+                excellenceFeedback += `\nTask: ${task.title}\nStatus: Completed on time! Excellent work. You managed to finish this task as planned. Keep up the great work!`;
+            }
+    
+            // Tasks Needing Attention
+            if (task.status === 'Expired' || task.status === 'In Progress' && !task.estimatedTime) {
+                attentionFeedback += `\nTask: ${task.title}\nStatus: ${task.status}. This task requires more attention. `;
+                if (task.status === 'Expired') {
+                    attentionFeedback += `It was due on ${task.dueDate}. Try breaking it into smaller tasks to make it easier to complete.`;
+                } else {
+                    attentionFeedback += `Consider adding an estimated time or deadline to help focus your efforts.`;
+                }
+            }
+    
+            // Motivational Feedback
+            if (task.status === 'In Progress' && task.priority === 'High') {
+                motivationalFeedback += `\nTask: ${task.title}\nStatus: In Progress. This task is high priority, so keep pushing to get it done. You're on the right track!`;
+            } else if (task.status === 'Todo') {
+                motivationalFeedback += `\nTask: ${task.title}\nStatus: Not Started. Make sure to prioritize this task soon. You’ve got this!`;
+            }
+        });
+    
+        return `
+            ## Areas of Excellence:
+            ${excellenceFeedback || 'No tasks have been completed yet, but keep going!'}
+    
+            ## Tasks Needing Attention:
+            ${attentionFeedback || 'No overdue tasks at the moment. Keep managing your deadlines!'}
+            
+            ## Motivational Feedback:
+            ${motivationalFeedback || 'Great job! Stay focused and keep pushing forward.'}
+        `;
+    };    
+    
+
+    const prompt = createPrompt(tasks);
+
+    try {
+        // Initialize the generative model
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash', // Use the appropriate AI model for the task
+        });
+
+        const generationConfig = {
+            temperature: 0.7, // Moderate temperature to get balanced results
+            topP: 0.9,
+            topK: 50,
+            maxOutputTokens: 8192,
+            responseMimeType: 'text/plain',
+        };
+
+        // Start a chat session
+        const chatSession = model.startChat({
+            generationConfig,
+            history: [
+                {
+                    role: 'user',
+                    parts: [
+                        {
+                            text: 'Analyze the following tasks and provide feedback on areas of excellence, improvement, and motivational advice.',
+                        },
+                    ],
+                },
+            ],
+        });
+
+        console.log('Generated Prompt:', prompt);
+
+        // Send the prompt to the model
+        const result = await chatSession.sendMessage(prompt);
+
+        if (result.response.text()) {
+            res.json({ feedback: result.response.text() });
+        } else {
+            res.json({ feedback: 'No feedback provided by the AI model.' });
+        }
+    } catch (error) {
+        console.error('Error fetching AI feedback:', error);
+        res.status(500).json({ error: 'An error occurred while generating AI feedback. Please try again later.' });
+    }
+};
+
 
 module.exports = {
     createTask,
@@ -346,4 +444,5 @@ module.exports = {
     getDailyTimeSpentData,
     getDashboard,
     getTaskStatus,
+    getAIFeedback,
 };
