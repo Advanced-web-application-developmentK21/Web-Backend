@@ -336,59 +336,57 @@ const getTaskStatus = async (req, res) => {
 };
 
 const getAIFeedback = async (req, res) => {
-    const { tasks } = req.body;
+    const { userId } = req.params;
 
     // Validate input
-    if (!tasks || !Array.isArray(tasks)) {
-        return res.status(400).json({ error: 'tasks must be a non-empty array.' });
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required.' });
     }
 
-    // Helper function to create the prompt for feedback generation
-    const createPrompt = (tasks) => {
-        let excellenceFeedback = '';
-        let attentionFeedback = '';
-        let motivationalFeedback = '';
-    
-        tasks.forEach((task) => {
-            // Areas of Excellence
-            if (task.status === 'Completed') {
-                excellenceFeedback += `\nTask: ${task.title}\nStatus: Completed on time! Excellent work. You managed to finish this task as planned. Keep up the great work!`;
-            }
-    
-            // Tasks Needing Attention
-            if (task.status === 'Expired' || task.status === 'In Progress' && !task.estimatedTime) {
-                attentionFeedback += `\nTask: ${task.title}\nStatus: ${task.status}. This task requires more attention. `;
-                if (task.status === 'Expired') {
-                    attentionFeedback += `It was due on ${task.dueDate}. Try breaking it into smaller tasks to make it easier to complete.`;
-                } else {
-                    attentionFeedback += `Consider adding an estimated time or deadline to help focus your efforts.`;
-                }
-            }
-    
-            // Motivational Feedback
-            if (task.status === 'In Progress' && task.priority === 'High') {
-                motivationalFeedback += `\nTask: ${task.title}\nStatus: In Progress. This task is high priority, so keep pushing to get it done. You're on the right track!`;
-            } else if (task.status === 'Todo') {
-                motivationalFeedback += `\nTask: ${task.title}\nStatus: Not Started. Make sure to prioritize this task soon. You’ve got this!`;
-            }
-        });
-    
-        return `
-            ## Areas of Excellence:
-            ${excellenceFeedback || 'No tasks have been completed yet, but keep going!'}
-    
-            ## Tasks Needing Attention:
-            ${attentionFeedback || 'No overdue tasks at the moment. Keep managing your deadlines!'}
-            
-            ## Motivational Feedback:
-            ${motivationalFeedback || 'Great job! Stay focused and keep pushing forward.'}
-        `;
-    };    
-    
-
-    const prompt = createPrompt(tasks);
-
     try {
+        // Fetch tasks for the user
+        const tasks = await TaskService.getTasksByUser(userId, req.query);
+
+        if (!tasks || tasks.length === 0) {
+            return res.status(404).json({ error: 'No tasks found for the user.' });
+        }
+
+        // Helper function to create the prompt for feedback generation
+        const createPrompt = (tasks) => `
+Analyze the following tasks in detail:
+${tasks
+                .map((task, index) => `
+    Task ${index + 1}: 
+    - Title: ${task.title}
+    - Description: ${task.desc}
+    - All Day: ${task.allDay}
+    - End: ${task.end}
+    - Estimated Time: ${task.estimatedTime || 'Not Scheduled'}
+    - Priority: ${task.priority}
+    - Status: ${task.status}
+    `)
+                .join('\n')}
+
+Please provide detailed feedback in the following sections, ensuring that you reference the specific tasks where applicable:
+
+1. **Areas of Excellence**:
+    - Identify tasks or aspects where the user is excelling.
+    - Provide clear examples of excellence in task management, referencing specific tasks (e.g., "Task 1: [Task Title] was completed on time and with exceptional quality").
+    - Highlight at least five things the user is doing well, such as meeting deadlines, prioritizing well, successfully completing tasks, or handling unexpected issues effectively.
+
+2. **Tasks Needing Attention**:
+    - Suggest at least five tasks or areas that may need more attention or could be improved.
+    - Point out tasks that have issues such as conflicts, delays, lack of progress, or unclear scheduling, referencing the specific task (e.g., "Task 3: [Task Title] has missed its deadline and needs clearer scheduling").
+    - Offer suggestions for improvement for each task.
+
+3. **Motivational Feedback**:
+    - Offer motivational feedback to encourage consistency and improvement.
+    - Provide at least five pieces of advice to help the user stay motivated, manage their time better, or improve their task completion rate.
+    - Provide specific advice based on tasks, such as "For Task 2: [Task Title], breaking down the task into smaller steps could help manage it more effectively."
+`;
+
+        const prompt = createPrompt(tasks);
+
         // Initialize the generative model
         const model = genAI.getGenerativeModel({
             model: 'gemini-1.5-flash', // Use the appropriate AI model for the task
@@ -410,7 +408,7 @@ const getAIFeedback = async (req, res) => {
                     role: 'user',
                     parts: [
                         {
-                            text: 'Analyze the following tasks and provide feedback on areas of excellence, improvement, and motivational advice.',
+                            text: 'Analyze the following tasks and provide detailed feedback on areas of excellence, improvement, and motivational advice. Ensure each section contains as many points as possible, but at least 5 items for each section.',
                         },
                     ],
                 },

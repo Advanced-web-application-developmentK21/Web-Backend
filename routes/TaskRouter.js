@@ -11,6 +11,6 @@ router.post('/analyze-schedule', TaskController.analyze_schedule);
 router.get('/daily-time-spent/:userId', TaskController.getDailyTimeSpentData);
 router.get('/dashboard/:userId', TaskController.getDashboard);
 router.get('/task-status/:userId', TaskController.getTaskStatus);
-router.post('/ai-feedback', TaskController.getAIFeedback);
+router.post('/ai-feedback/:userId', TaskController.getAIFeedback);
 
 module.exports = router;
