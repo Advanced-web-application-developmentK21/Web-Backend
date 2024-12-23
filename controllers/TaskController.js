@@ -229,9 +229,91 @@ const analyze_schedule = async (req, res) => {
         Warnings: Identify at least three tasks that are too tightly scheduled, have conflicts, or could cause problems. Make sure to highlight at least three issues.
         Prioritization Recommendations: Advise on which tasks should be prioritized and balanced;
         Simple Steps to Fix: Suggest quick fixes to improve the schedule, such as moving or extending tasks, or adjusting priorities. Keep the feedback concise and easy to understand.
+        Time Management Suggestion: Implement a structured approach to managing time effectively.
     `;
 
     const prompt = createPrompt(calendarEvents);
+
+    try {
+        // Initialize the generative model
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+        });
+
+        const generationConfig = {
+            temperature: 2,
+            topP: 0.95,
+            topK: 40,
+            maxOutputTokens: 8192,
+            responseMimeType: "text/plain",
+        };
+
+        // Start the chat session
+        const chatSession = model.startChat({
+            generationConfig,
+            history: [
+                {
+                    role: "user",
+                    parts: [
+                        {
+                            text: "Analyze the following tasks and provide optimization suggestions.",
+                        },
+                    ],
+                },
+            ],
+        });
+
+        console.log('Generated Prompt:', prompt);
+
+        // Send the prompt to the model
+        const result = await chatSession.sendMessage(prompt);
+
+        if (result.response.text()) {
+            res.json({ feedback: result.response.text() });
+        } else {
+            res.json({ feedback: 'No feedback provided by the AI model.' });
+        }
+    } catch (error) {
+        console.error('Error analyzing schedule:', error);
+        res.status(500).json({ error: 'An error occurred while analyzing the schedule. Please try again later.' });
+    }
+};
+
+const suggest_task = async (req, res) => {
+    const { task, Tasks } = req.body;
+
+    // Validate input
+    if (!Tasks || !Array.isArray(Tasks)) {
+        return res.status(400).json({ error: 'Tasks must be a non-empty array of task data.' });
+    }
+
+    // Helper function to create the prompt
+    const createPrompt = (task, events) => `
+        Give you this task:
+        All Day: ${task.allDay}, 
+        Description: ${task.desc}, 
+        End: ${task.end}, 
+        Estimated Time: ${task.estimatedTime || 'Not Scheduled'}, 
+        Priority: ${task.priority}, 
+        Status: ${task.status}, 
+        Title: ${task.title} 
+
+        Along with the other following tasks:
+        ${events
+            .map((task) => `
+              All Day: ${task.allDay}, 
+              Description: ${task.desc}, 
+              End: ${task.end}, 
+              Estimated Time: ${task.estimatedTime || 'Not Scheduled'}, 
+              Priority: ${task.priority}, 
+              Status: ${task.status}, 
+              Title: ${task.title}`)
+            .join('\n')}
+        Provide suggestion for the first task I give you  to fit with other following tasks, point out each attribute should be fixed.
+        And keep the suggestion for each attribute short as much as you can.
+    `;
+
+    const prompt = createPrompt(task, Tasks);
 
     try {
         // Initialize the generative model
@@ -439,6 +521,7 @@ module.exports = {
     updateTask,
     deleteTask,
     analyze_schedule,
+    suggest_task,
     getDailyTimeSpentData,
     getDashboard,
     getTaskStatus,

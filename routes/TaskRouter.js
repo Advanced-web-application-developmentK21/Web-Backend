@@ -8,6 +8,7 @@ router.get('/getTasks/:id', TaskController.getTaskById);
 router.put('/updateTasks/:id', TaskController.updateTask);
 router.delete('/deleteTasks/:id', TaskController.deleteTask);
 router.post('/analyze-schedule', TaskController.analyze_schedule);
+router.post('/suggest', TaskController.suggest_task);
 router.get('/daily-time-spent/:userId', TaskController.getDailyTimeSpentData);
 router.get('/dashboard/:userId', TaskController.getDashboard);
 router.get('/task-status/:userId', TaskController.getTaskStatus);
