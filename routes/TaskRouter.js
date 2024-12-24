@@ -13,5 +13,6 @@ router.get('/daily-time-spent/:userId', TaskController.getDailyTimeSpentData);
 router.get('/dashboard/:userId', TaskController.getDashboard);
 router.get('/task-status/:userId', TaskController.getTaskStatus);
 router.post('/ai-feedback/:userId', TaskController.getAIFeedback);
+router.post('/chatbot-ask/:userId', TaskController.chatbotQNA);
 
 module.exports = router;

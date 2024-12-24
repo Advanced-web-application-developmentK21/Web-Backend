@@ -1,3 +1,4 @@
+const { default: axios } = require('axios');
 const Task = require('../models/Task');
 const TaskService = require('../services/TaskService');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -439,7 +440,7 @@ Analyze the following tasks in detail:
 ${tasks
                 .map((task, index) => `
     Task ${index + 1}: 
-    - Title: ${task.title}
+    - Title: ${task.name}
     - Description: ${task.desc}
     - All Day: ${task.allDay}
     - End: ${task.end}
@@ -513,6 +514,110 @@ Please provide detailed feedback in the following sections, ensuring that you re
     }
 };
 
+const chatbotQNA = async (req, res) => {
+    const { userId } = req.params; // Get userId from route params
+    const { question } = req.body; // Get the question from the request body
+
+    if (!question || typeof question !== 'string') {
+        return res.status(400).json({ error: 'A valid question must be provided.' });
+    }
+
+    // Validate userId
+    if (!userId) {
+        return res.status(400).json({ error: 'User ID is required.' });
+    }
+
+    try {
+        // Fetch tasks for the user
+        const tasks = await TaskService.getTasksByUser(userId, req.query);
+
+        if (!tasks || tasks.length === 0) {
+            return res.status(404).json({ error: 'No tasks found for the user.' });
+        }
+
+        // Helper function to create the prompt for question generation based on tasks
+        const createPrompt = (tasks, question) => {
+            return `
+Analyze the following tasks in detail and answer the question based on the provided information:
+${tasks
+                .map((task, index) => `
+    Task ${index + 1}: 
+    - Title: ${task.name}
+    - Description: ${task.desc}
+    - All Day: ${task.allDay}
+    - End: ${task.end}
+    - Estimated Time: ${task.estimatedTime || 'Not Scheduled'}
+    - Priority: ${task.priority}
+    - Status: ${task.status}
+    `)
+                .join('\n')}
+    
+User's Question: "${question}"
+
+Please answer the question based on the tasks above, providing insights based on the task information.
+`;
+        };
+
+        const prompt = createPrompt(tasks, question);
+
+        // Check if the question relates to navigation or project information
+        if (question.toLowerCase().includes("where can i") || question.toLowerCase().includes("how do i find")) {
+            const navigationInfo = `
+Here are some sections you may be looking for:
+- **Task Management**: To manage tasks, click the “Tasks” tab in the navigation menu.
+- **Calendar View**: To access the calendar, click on the "Calendar" option in the sidebar.
+- **Focus Timer**: Start the focus timer by selecting a task in the calendar and clicking on the timer icon.
+- **AI Suggestions**: To analyze your schedule, click the “Analyze Schedule” button on the dashboard.
+- **Profile & Settings**: To update your profile, click on your name in the top-right corner and select “Profile” from the dropdown.
+
+If you're looking for something specific, feel free to ask!
+`;
+            return res.json({ message: navigationInfo });
+        }
+
+        // Initialize the generative model (assuming you are using Gemini API)
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash', // Use the appropriate AI model for the task
+        });
+
+        const generationConfig = {
+            temperature: 0.7, // Moderate temperature to get balanced results
+            topP: 0.9,
+            topK: 50,
+            maxOutputTokens: 8192,
+            responseMimeType: 'text/plain',
+        };
+
+        // Start a chat session
+        const chatSession = model.startChat({
+            generationConfig,
+            history: [
+                {
+                    role: 'user',
+                    parts: [
+                        {
+                            text: 'Analyze the tasks and answer the question based on the information provided.',
+                        },
+                    ],
+                },
+            ],
+        });
+
+        console.log('Generated Prompt:', prompt);
+
+        // Send the prompt to the model
+        const result = await chatSession.sendMessage(prompt);
+
+        if (result.response.text()) {
+            res.json({ message: result.response.text() });
+        } else {
+            res.json({ message: 'No answer provided by the AI model.' });
+        }
+    } catch (error) {
+        console.error('Error analyzing the question:', error.response ? error.response.data : error.message);
+        res.status(500).json({ error: 'An error occurred while analyzing the question. Please try again later.' });
+    }
+};
 
 module.exports = {
     createTask,
@@ -526,4 +631,5 @@ module.exports = {
     getDashboard,
     getTaskStatus,
     getAIFeedback,
+    chatbotQNA,
 };
