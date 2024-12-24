@@ -281,7 +281,7 @@ const analyze_schedule = async (req, res) => {
 };
 
 const suggest_task = async (req, res) => {
-    const { task, Tasks } = req.body;
+    const { curTask, Tasks } = req.body;
 
     // Validate input
     if (!Tasks || !Array.isArray(Tasks)) {
@@ -291,14 +291,14 @@ const suggest_task = async (req, res) => {
     // Helper function to create the prompt
     const createPrompt = (task, events) => `
         Give you this task:
-        All Day: ${task.allDay}, 
+        Title: ${task.title} ,
         Description: ${task.desc}, 
-        End: ${task.end}, 
-        Estimated Time: ${task.estimatedTime || 'Not Scheduled'}, 
         Priority: ${task.priority}, 
         Status: ${task.status}, 
-        Title: ${task.title} 
-
+        Start Date: ${task.startDate}
+        Due Date: ${task.dueDate}, 
+        Estimated Time: ${task.estimatedTime} day
+        
         Along with the other following tasks:
         ${events
             .map((task) => `
@@ -312,9 +312,10 @@ const suggest_task = async (req, res) => {
             .join('\n')}
         Provide suggestion for the first task I give you  to fit with other following tasks, point out each attribute should be fixed.
         And keep the suggestion for each attribute short as much as you can.
+        No need for General Optimizations for ALL Tasks.
     `;
 
-    const prompt = createPrompt(task, Tasks);
+    const prompt = createPrompt(curTask, Tasks);
 
     try {
         // Initialize the generative model
