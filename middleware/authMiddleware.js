@@ -9,34 +9,25 @@ const User = require('../models/Users');
 
 // Authentication middleware
 const authMiddleware = () => (req, res, next) => {
-    const authHeader = req.headers['authorization']; // Look for the 'Authorization' header
-    if (!authHeader) {
+    const authHeader = req.headers['authorization']; // Use 'authorization' header
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({
-            message: 'Access token is missing',
-            status: 'ERR'
+            message: 'Authorization token missing or invalid',
+            status: 'ERR',
         });
     }
 
-    // Extract token from "Bearer <token>"
-    const token = authHeader.split(' ')[1];
-    if (!token) {
-        return res.status(401).json({
-            message: 'Bearer token is missing',
-            status: 'ERR'
-        });
-    }
-
-    // Verify the token
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    const token = authHeader.split(' ')[1]; // Extract token after 'Bearer'
+    jwt.verify(token, process.env.ACCESS_TOKEN, (err, user) => {
         if (err) {
-            return res.status(401).json({
-                message: 'Access token is invalid or expired',
-                status: 'ERR'
+            return res.status(403).json({
+                message: 'Your access token is invalid or expired',
+                status: 'ERR',
             });
         }
 
-        req.user = decoded; // Attach decoded user info to request
-        next(); // Proceed to the next middleware/route handler
+        req.user = user; // Attach the user information to the request object
+        next(); // Proceed to the next middleware or route handler
     });
 };
 
@@ -46,7 +37,8 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: 'https://web-backend-q0is.onrender.com/user/auth/google/callback',
+            //callbackURL: 'https://web-backend-q0is.onrender.com/user/auth/google/callback',
+            callbackURL: 'http://localhost:4000/user/auth/google/callback',
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
