@@ -7,13 +7,13 @@ const passport = require('passport');
 router.post('/register', userController.createUser)
 router.post('/login', userController.loginUser)
 
-router.put('/update-user/:id', userController.updateUser)
+router.put('/update-user/:id', authMiddleware(), userController.updateUser)
 
 router.get('/profile/:id', authMiddleware(), userController.getDetailsUser)
 
 router.post('/refresh-token', userController.refreshToken),
 
-router.post('/logout/:id', userController.logoutUser);
+router.post('/logout/:id', authMiddleware(), userController.logoutUser);
 
 router.post('/update-password', userController.updatePassword);
 
@@ -27,9 +27,8 @@ router.get(
     passport.authenticate('google', { session: false }),
     (req, res) => {
         const user = req.user; // Lấy thông tin user từ GoogleStrategy
-        res.redirect(`https://localhost:3000/google-login-success?email=${user.email}&username=${user.username}`);
+        res.redirect(`http://localhost:3000/google-login-success?email=${user.email}&username=${user.username}`);
     }
 );
-
 
 module.exports = router
