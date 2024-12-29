@@ -1,6 +1,11 @@
 const UserService = require('../services/UserService')
 const JwtService = require('../services/JwtService')
 
+const nodemailer = require('nodemailer');
+const User = require('../models/Users');
+const PasswordResetCode = require('../models/PasswordResetCodes');
+const bcrypt = require("bcrypt")
+
 const createUser = async (req, res) => {
     try {
         const { username, email, password, confirmPassword } = req.body;
@@ -207,6 +212,141 @@ const updatePassword = async (req, res) => {
     }
 };
 
+const generateCode = () => {
+    return Math.floor(100000000 + Math.random() * 900000000); // Generates a 9-digit number
+};
+
+const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ status: 'ERR', message: 'Email is required.' });
+    }
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ status: 'ERR', message: 'User not found.' });
+        }
+
+        // Generate a 9-digit code
+        const code = generateCode();
+        const expiryDate = new Date();
+        expiryDate.setMinutes(expiryDate.getMinutes() + 10); // Set expiry to 10 minutes
+
+        // Save the code in the PasswordResetCode collection
+        const resetCode = new PasswordResetCode({
+            email,
+            code,
+            expiryDate
+        });
+        await resetCode.save();
+
+        // Xóa mã sau 2 phút (120,000ms)
+        setTimeout(async () => {
+            await PasswordResetCode.deleteOne({ _id: resetCode._id });
+            console.log(`Password reset code for ${email} has been deleted.`);
+        }, 120000); // 2 phút
+
+        // Create transporter using email credentials from .env
+        const transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: false, // Allow insecure connections if needed
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Reset Your Password',
+            html: `
+                <p>We received a request to reset your password. Use the following code to reset your password:</p>
+                <h2>${code}</h2>
+                <p>If you didn't request a password reset, please ignore this email.</p>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ status: 'SUCCESS', message: 'Reset code sent to your email.' });
+    } catch (error) {
+        res.status(500).json({ status: 'ERR', message: error.message });
+    }
+};
+
+const verifyResetCode = async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+        return res.status(400).json({ status: 'ERR', message: 'Email and code are required.' });
+    }
+
+    try {
+        // Tìm mã reset theo email và mã code
+        const resetCode = await PasswordResetCode.findOne({ email, code: parseInt(code, 10) });
+
+        if (!resetCode) {
+            return res.status(400).json({ status: 'ERR', message: 'Invalid or expired code.' });
+        }
+
+        // Kiểm tra xem mã đã được sử dụng chưa
+        if (resetCode.used) {
+            return res.status(400).json({ status: 'ERR', message: 'Code has already been used.' });
+        }
+
+        // Kiểm tra mã có hết hạn hay không
+        const currentDate = new Date();
+        if (resetCode.expiryDate < currentDate) {
+            return res.status(400).json({ status: 'ERR', message: 'Code has expired.' });
+        }
+
+        // Đánh dấu mã là đã sử dụng
+        resetCode.used = true;
+        await resetCode.save();
+
+        // Sau khi xác minh mã hợp lệ, cho phép người dùng tiếp tục đổi mật khẩu
+        res.status(200).json({ status: 'SUCCESS', message: 'Code verified, proceed to reset password.' });
+
+        // Bạn có thể xóa mã sau khi sử dụng nếu không muốn lưu trữ lại
+        // await PasswordResetCode.deleteOne({ _id: resetCode._id });
+
+    } catch (error) {
+        res.status(500).json({ status: 'ERR', message: error.message });
+    }
+};
+
+const resetPassword = async (req, res) => {
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+        return res.status(400).json({ status: 'ERR', message: 'Email and new password are required.' });
+    }
+
+    try {
+        // Find the user by email
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ status: 'ERR', message: 'User not found.' });
+        }
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update the user's password
+        user.password = hashedPassword;
+        await user.save();
+
+        res.status(200).json({ status: 'SUCCESS', message: 'Password has been reset successfully.' });
+    } catch (error) {
+        res.status(500).json({ status: 'ERR', message: error.message });
+    }
+};
+
 
 module.exports = {
     createUser,
@@ -215,5 +355,8 @@ module.exports = {
     getDetailsUser,
     refreshToken,
     logoutUser,
-    updatePassword
+    updatePassword,
+    forgotPassword,
+    verifyResetCode,
+    resetPassword
 }

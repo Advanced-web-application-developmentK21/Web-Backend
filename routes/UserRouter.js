@@ -17,6 +17,13 @@ router.post('/logout/:id', authMiddleware(), userController.logoutUser);
 
 router.post('/update-password', userController.updatePassword);
 
+router.post('/forgot-password', userController.forgotPassword);
+
+router.post('/verify-code', userController.verifyResetCode);
+
+router.post('/reset-password', userController.resetPassword);
+
+
 router.get(
     '/auth/google',
     passport.authenticate('google', { scope: ['profile', 'email'] })
