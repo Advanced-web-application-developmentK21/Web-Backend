@@ -63,28 +63,28 @@ const createUser = async (req, res) => {
 };
 
 
-const loginUser= async(req,res)=>{
-    try{
-        const {email, password} = req.body
+const loginUser = async (req, res) => {
+    try {
+        const { email, password } = req.body
         const reg = /^\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$/
         const isCheckEmail = reg.test(email)
 
-        if(!email && !password ){
+        if (!email && !password) {
             return res.status(404).json({
                 status: 'ERR',
                 message: 'Please input your email and password'
             })
-        } else if(!email){
+        } else if (!email) {
             return res.status(404).json({
                 status: 'ERR',
                 message: 'Please input your email'
             })
-        } else if(!password){
+        } else if (!password) {
             return res.status(404).json({
                 status: 'ERR',
                 message: 'Please input your password'
             })
-        } else if(!isCheckEmail) {
+        } else if (!isCheckEmail) {
             return res.status(404).json({
                 status: 'ERR',
                 message: 'Email format is invalid. Please check the email and try again.'
@@ -92,27 +92,27 @@ const loginUser= async(req,res)=>{
         }
         const response = await UserService.loginUser(req.body)
         return res.status(200).json(response)
-    }catch(e){
+    } catch (e) {
         return res.status(404).json({
             message: e
         })
     }
 }
 
-const updateUser = async(req,res)=>{
-    try{
+const updateUser = async (req, res) => {
+    try {
         const userId = req.params.id
         const data = req.body
-        if(!userId){
+        if (!userId) {
             return res.status(404).json({
-                status: 'ERR', 
+                status: 'ERR',
                 message: 'The userId is required'
             })
         }
 
         const response = await UserService.updateUser(userId, data)
         return res.status(200).json(response)
-    }catch(e){
+    } catch (e) {
         return res.status(404).json({
             message: e
         })
@@ -124,7 +124,7 @@ const getDetailsUser = async (req, res) => {
     try {
         if (!id) {
             return res.status(404).json({
-                status: 'ERR', 
+                status: 'ERR',
                 message: 'The userId is required'
             });
         }
@@ -139,19 +139,19 @@ const getDetailsUser = async (req, res) => {
     }
 };
 
-const refreshToken = async(req,res)=>{
-    try{
+const refreshToken = async (req, res) => {
+    try {
         const token = req.headers.token.split(' ')[1]
-        if(!token){
+        if (!token) {
             return res.status(404).json({
-                status: 'ERR', 
+                status: 'ERR',
                 message: 'The token is required'
             })
         }
 
         const response = await JwtService.refreshTokenJwtService(token)
         return res.status(200).json(response)
-    }catch(e){
+    } catch (e) {
         return res.status(404).json({
             message: e
         })
@@ -446,6 +446,26 @@ const resetPassword = async (req, res) => {
     }
 };
 
+// Upload avatar và cập nhật đường dẫn trong MongoDB
+const uploadAvatar = async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const avatarUrl = req.file.path; // URL ảnh từ Multer
+
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { avatar: avatarUrl },
+            { new: true }
+        );
+
+        res.status(200).json({
+            message: 'Avatar uploaded successfully',
+            user,
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to upload avatar', details: error.message });
+    }
+};
 
 module.exports = {
     createUser,
@@ -459,5 +479,6 @@ module.exports = {
     verifyEmail,
     verifyResetCode,
     verifyEmailCode,
-    resetPassword
+    resetPassword,
+    uploadAvatar
 }

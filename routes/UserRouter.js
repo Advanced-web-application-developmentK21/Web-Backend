@@ -3,6 +3,7 @@ const router = express.Router()
 const userController = require('../controllers/UserController');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const passport = require('passport');
+const upload = require('../middleware/multer');
 
 router.post('/register', userController.createUser)
 router.post('/login', userController.loginUser)
@@ -26,6 +27,8 @@ router.post('/reset-password', userController.resetPassword);
 router.post('/verify-email', userController.verifyEmail);
 router.post('/verify-email-code', userController.verifyEmailCode);
 
+// Route upload avatar
+router.post('/upload-avatar/:id', upload.single('avatar'), userController.uploadAvatar);
 
 router.get(
     '/auth/google',
