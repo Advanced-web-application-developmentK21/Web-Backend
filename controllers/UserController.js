@@ -279,6 +279,64 @@ const forgotPassword = async (req, res) => {
     }
 };
 
+const verifyEmail = async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ status: 'ERR', message: 'Email is required.' });
+    }
+
+    try {
+        // Generate a 9-digit code
+        const code = generateCode();
+        const expiryDate = new Date();
+        expiryDate.setMinutes(expiryDate.getMinutes() + 10); // Set expiry to 10 minutes
+
+        // Save the code in the PasswordResetCode collection
+        const verifyCode = new PasswordResetCode({
+            email,
+            code,
+            expiryDate
+        });
+        await verifyCode.save();
+
+        // Xóa mã sau 2 phút (120,000ms)
+        setTimeout(async () => {
+            await PasswordResetCode.deleteOne({ _id: verifyCode._id });
+            console.log(`Verify code for ${email} has been deleted.`);
+        }, 120000); // 2 phút
+
+        // Create transporter using email credentials from .env
+        const transporter = nodemailer.createTransport({
+            service: 'Gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+            tls: {
+                rejectUnauthorized: false, // Allow insecure connections if needed
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Verify Your Email Address',
+            html: `
+                <p>Welcome to AI Study Planer. Use the following code to confirm your registration:</p>
+                <h2>${code}</h2>
+                <p>If you didn't sign up to AI Study Planer, please ignore this email.</p>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.status(200).json({ status: 'SUCCESS', message: 'Verify code sent to your email.' });
+    } catch (error) {
+        res.status(500).json({ status: 'ERR', message: error.message });
+    }
+};
+
 const verifyResetCode = async (req, res) => {
     const { email, code } = req.body;
 
@@ -311,6 +369,47 @@ const verifyResetCode = async (req, res) => {
 
         // Sau khi xác minh mã hợp lệ, cho phép người dùng tiếp tục đổi mật khẩu
         res.status(200).json({ status: 'SUCCESS', message: 'Code verified, proceed to reset password.' });
+
+        // Bạn có thể xóa mã sau khi sử dụng nếu không muốn lưu trữ lại
+        // await PasswordResetCode.deleteOne({ _id: resetCode._id });
+
+    } catch (error) {
+        res.status(500).json({ status: 'ERR', message: error.message });
+    }
+};
+
+const verifyEmailCode = async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+        return res.status(400).json({ status: 'ERR', message: 'Email and code are required.' });
+    }
+
+    try {
+        // Tìm mã reset theo email và mã code
+        const verifyCode = await PasswordResetCode.findOne({ email, code: parseInt(code, 10) });
+
+        if (!verifyCode) {
+            return res.status(400).json({ status: 'ERR', message: 'Invalid or expired code.' });
+        }
+
+        // Kiểm tra xem mã đã được sử dụng chưa
+        if (verifyCode.used) {
+            return res.status(400).json({ status: 'ERR', message: 'Code has already been used.' });
+        }
+
+        // Kiểm tra mã có hết hạn hay không
+        const currentDate = new Date();
+        if (verifyCode.expiryDate < currentDate) {
+            return res.status(400).json({ status: 'ERR', message: 'Code has expired.' });
+        }
+
+        // Đánh dấu mã là đã sử dụng
+        verifyCode.used = true;
+        await verifyCode.save();
+
+        // Sau khi xác minh mã hợp lệ, cho phép người dùng tiếp tục đổi mật khẩu
+        res.status(200).json({ status: 'SUCCESS', message: 'Code verified, proceed to sign up.' });
 
         // Bạn có thể xóa mã sau khi sử dụng nếu không muốn lưu trữ lại
         // await PasswordResetCode.deleteOne({ _id: resetCode._id });
@@ -357,6 +456,8 @@ module.exports = {
     logoutUser,
     updatePassword,
     forgotPassword,
+    verifyEmail,
     verifyResetCode,
+    verifyEmailCode,
     resetPassword
 }

@@ -23,6 +23,9 @@ router.post('/verify-code', userController.verifyResetCode);
 
 router.post('/reset-password', userController.resetPassword);
 
+router.post('/verify-email', userController.verifyEmail);
+router.post('/verify-email-code', userController.verifyEmailCode);
+
 
 router.get(
     '/auth/google',
