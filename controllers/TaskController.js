@@ -620,6 +620,34 @@ If you're looking for something specific, feel free to ask!
     }
 };
 
+const updateExpiredTasks = async (req, res) => {
+    try {
+        const { userId } = req.params; // Extract userId from params
+        const now = new Date();
+
+        // Update all tasks with dueDate in the past to status 'Expired', excluding 'Completed' and already 'Expired'
+        const result = await Task.updateMany(
+            { 
+                userId, 
+                dueDate: { $lt: now }, 
+                status: { $nin: ['Expired', 'Completed'] } 
+            },
+            { $set: { status: 'Expired' } }
+        );
+
+        return res.status(200).json({
+            status: 'SUCCESS',
+            message: `${result.modifiedCount} tasks updated to 'Expired'.`,
+        });
+    } catch (error) {
+        console.error('Error updating expired tasks:', error);
+        return res.status(500).json({ 
+            status: 'ERR', 
+            message: 'Failed to update expired tasks' 
+        });
+    }
+};
+
 module.exports = {
     createTask,
     getTasks,
@@ -633,4 +661,5 @@ module.exports = {
     getTaskStatus,
     getAIFeedback,
     chatbotQNA,
+    updateExpiredTasks
 };
