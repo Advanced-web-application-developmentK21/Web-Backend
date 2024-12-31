@@ -16,4 +16,6 @@ router.get('/task-status/:userId', authMiddleware(), TaskController.getTaskStatu
 router.post('/ai-feedback/:userId', authMiddleware(), TaskController.getAIFeedback);
 router.post('/chatbot-ask/:userId', authMiddleware(), TaskController.chatbotQNA);
 
+router.put('/update-expired-tasks/:userId', authMiddleware(), TaskController.updateExpiredTasks);
+
 module.exports = router;
