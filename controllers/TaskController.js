@@ -648,6 +648,91 @@ const updateExpiredTasks = async (req, res) => {
     }
 };
 
+const suggestFocusTime = async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // Fetch user tasks directly
+        const tasks = await TaskService.getTaskByUserId(userId); // Replace with the actual logic
+
+        if (!tasks || tasks.length === 0) {
+            return res.status(404).json({ error: 'No tasks found for the user.' });
+        }
+
+        // Create AI prompt
+        const createPrompt = (tasks) => `
+    You have the following tasks:
+
+    ${tasks
+        .map(
+            (task, index) => `
+            Task ${index + 1}:
+            Title: ${task.name}
+            Estimated Time: ${task.estimatedTime || 'Not Scheduled'}
+            Priority: ${task.priority}
+            Deadline: ${task.dueDate ? task.dueDate : 'No Deadline'}
+            `
+        )
+        .join('\n')}
+
+    Suggest the best time to focus on each of these tasks, and provide the recommended time for each task.
+`;
+
+        // Pass all tasks to the prompt
+        const prompt = createPrompt(tasks);
+
+        // Initialize generative AI model
+        const model = genAI.getGenerativeModel({
+            model: 'gemini-1.5-flash',
+        });
+
+        const generationConfig = {
+            temperature: 1.2,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+        };
+
+        const chatSession = model.startChat({
+            generationConfig,
+            history: [
+                {
+                    role: "user",
+                    parts: [
+                        {
+                            text: "Suggest the best focus time for the tasks based on the schedule.",
+                        },
+                    ],
+                },
+            ],
+        });
+
+        const result = await chatSession.sendMessage(prompt);
+
+        if (result.response && result.response.text) {
+            // Parse the AI response and format it with task names and suggested focus times
+            const aiResponse = result.response.text();
+            const formattedResponse = tasks.map((task, index) => {
+                // Try to extract the suggestion from the AI response
+                const suggestion = aiResponse.includes(`Task ${index + 1}`) 
+                    ? aiResponse.split(`Task ${index + 1}`)[1].split('\n')[0]
+                    : 'No suggestion provided';
+
+                return {
+                    task: task.name,
+                    focusTime: suggestion,
+                };
+            });
+
+            res.json({ suggestions: formattedResponse });
+        } else {
+            res.json({ suggestion: 'No suggestion provided by the AI model.' });
+        }
+    } catch (error) {
+        console.error('Error suggesting focus time:', error);
+        res.status(500).json({ error: 'An error occurred while suggesting focus time. Please try again later.' });
+    }
+};
+
 module.exports = {
     createTask,
     getTasks,
@@ -661,5 +746,6 @@ module.exports = {
     getTaskStatus,
     getAIFeedback,
     chatbotQNA,
-    updateExpiredTasks
+    updateExpiredTasks,
+    suggestFocusTime
 };

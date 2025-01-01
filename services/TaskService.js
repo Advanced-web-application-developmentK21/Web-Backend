@@ -32,6 +32,15 @@ const getTasksByUser = async (userId, queryParams) => {
     return await Task.find(query).sort(sortCriteria);
 };
 
+const getTaskByUserId = async (userId) => {
+    try {
+        return await Task.find({ userId }).sort({ createdAt: -1 }); // Fetch tasks for the user, sorted by creation date
+    } catch (error) {
+        console.error('Error fetching tasks for user:', error);
+        throw new Error('Error fetching tasks.');
+    }
+};
+
 /**
  * Find a task by name for a specific user
  */
@@ -215,4 +224,5 @@ module.exports = {
     getDailyTimeSpent,
     getDashboardData,
     getTaskStatusCounts,
+    getTaskByUserId
 };
