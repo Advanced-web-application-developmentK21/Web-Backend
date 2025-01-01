@@ -671,11 +671,15 @@ const suggestFocusTime = async (req, res) => {
             Estimated Time: ${task.estimatedTime || 'Not Scheduled'}
             Priority: ${task.priority}
             Deadline: ${task.dueDate ? task.dueDate : 'No Deadline'}
+            Status: ${task.status}
             `
         )
         .join('\n')}
 
-    Suggest the best time to focus on each of these tasks, and provide the recommended time for each task.
+    Suggests the best tasks have status "In Progress" should be focused on TODAY!
+    For each task, give me an estimate time (hours or minute) to focus based on its info.
+    Sort the list from top priority, remove the uncessary task if it don't need to be done today. And make it sort, no need to explain each task time so I can put in format:
+     - **Task's title:** Estimate time (its Priority).
 `;
 
         // Pass all tasks to the prompt
@@ -708,22 +712,8 @@ const suggestFocusTime = async (req, res) => {
 
         const result = await chatSession.sendMessage(prompt);
 
-        if (result.response && result.response.text) {
-            // Parse the AI response and format it with task names and suggested focus times
-            const aiResponse = result.response.text();
-            const formattedResponse = tasks.map((task, index) => {
-                // Try to extract the suggestion from the AI response
-                const suggestion = aiResponse.includes(`Task ${index + 1}`) 
-                    ? aiResponse.split(`Task ${index + 1}`)[1].split('\n')[0]
-                    : 'No suggestion provided';
-
-                return {
-                    task: task.name,
-                    focusTime: suggestion,
-                };
-            });
-
-            res.json({ suggestions: formattedResponse });
+        if (result.response.text()) {
+            res.json({ suggestion: result.response.text() });
         } else {
             res.json({ suggestion: 'No suggestion provided by the AI model.' });
         }
