@@ -676,7 +676,7 @@ const suggestFocusTime = async (req, res) => {
         )
         .join('\n')}
 
-    Suggests the best tasks have status "In Progress" should be focused on TODAY!
+    Suggests top 3 tasks have status "In Progress" should be focused on TODAY!
     For each task, give me an estimate time (hours or minute) to focus based on its info.
     Sort the list from top priority, remove the uncessary task if it don't need to be done today. And make it sort, no need to explain each task time so I can put in format:
      - **Task's title:** Estimate time (its Priority).
